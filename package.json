@@ -1,0 +1,14 @@
+{
+  "name": "d2-manifest",
+  "version": "0.0.1",
+  "homepage": "https://www.dhis2.org",
+  "description": "A app manifest creator for dhis2",
+  "main": "d2-manifest.js",
+  "bin": {
+    "d2-manifest": "./d2-manifest.js"
+  },
+  "dependencies": {
+    "colors": "^1.0.3",
+    "minimist": "^1.1.0"
+  }
+}
