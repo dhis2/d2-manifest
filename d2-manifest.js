@@ -179,8 +179,15 @@ function askForAdditionalFields() {
     });
     console.log('');
 
-    rl.question('Enter a number or \'s\' save as "manifest.webapp": ', function (answer) {
+    printMessage('s: To save as "manifest.webapp" (Program will quit after save)');
+    printMessage('q: To quit');
+    rl.question('Enter a number to edit or one of the commands above: ', function (answer) {
         var fieldName;
+
+        if (answer == 'q') {
+            rl.close();
+            return;
+        }
 
         if (answer == 's') {
             //Save
