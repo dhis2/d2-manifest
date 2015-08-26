@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var colors = require('colors/safe');
 var readline = require('readline');
 var fs = require('fs');
