@@ -5,6 +5,8 @@ var readline = require('readline');
 var fs = require('fs');
 var argv = require('minimist')(process.argv.slice(2));
 
+var manifestFolderName = '.';
+
 var requiredFields = [
     { name: 'name' },
     { name: 'description' },
@@ -235,7 +237,7 @@ function createNew() {
 }
 
 function saveManifest() {
-    fs.writeFile('./manifest.webapp', JSON.stringify(manifest), function (err) {
+    fs.writeFile([manifestFolderName, 'manifest.webapp'].join('/'), JSON.stringify(manifest), function (err) {
         if (err) {
             printError(err);
         } else {
@@ -297,11 +299,25 @@ printMessage('Attempting to find existing manifest file.');
 
 fs.readFile('./manifest.webapp', 'utf8', function (err, data) {
   if (err) {
-    console.log('- Manifest file not found or corrupted, creating a new one.');
-    console.log('');
-    createNew();
+    console.log('-- Manifest file not found in the root of the project, checking /src folder.');
+    fs.readFile('./src/manifest.webapp', 'utf8', function (err, data) {
+        if (err) {
+            console.log('- Manifest file not found or corrupted, creating a new one.');
+            console.log('');
+            createNew();
+            return;
+        }
+
+        console.log('-- Found manifest file in /src folder');
+        manifestFolderName = './src';
+        console.log('');
+        manifest = JSON.parse(data);
+        checkAction();
+        rl.close();
+    });
     return;
   }
+
   console.log('- Existing manifest found, using existing manifest.');
   console.log('');
   manifest = JSON.parse(data);
