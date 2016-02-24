@@ -7,8 +7,14 @@
   "bin": {
     "d2-manifest": "./d2-manifest.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dhis2/d2-manifest.git"
+  },
+  "license": "BSD-3-Clause",
   "dependencies": {
     "colors": "^1.0.3",
+    "loglevel": "^1.4.0",
     "minimist": "^1.1.0"
   }
 }
