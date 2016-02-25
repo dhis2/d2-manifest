@@ -13,8 +13,17 @@
   },
   "license": "BSD-3-Clause",
   "dependencies": {
+    "author-regex": "^0.2.1",
     "colors": "^1.0.3",
     "loglevel": "^1.4.0",
     "minimist": "^1.1.0"
+  },
+  "author": "DHIS 2 Core Developers (https://www.github.com/dhis2/d2-manifest)",
+  "contributors": [
+    "Mark Polak <mark@dhis2.org>",
+    "Nicolay Ramm <nicolay@dhis2.org>"
+  ],
+  "webapp.manifest": {
+    "version": ""
   }
 }
