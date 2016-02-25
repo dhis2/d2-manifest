@@ -1,95 +1,116 @@
 #!/usr/bin/env node
+"use strict";
 
-var colors = require('colors/safe');
-var readline = require('readline');
-var fs = require('fs');
-var argv = require('minimist')(process.argv.slice(2));
+const fs = require('fs');
+const readline = require('readline');
+const colors = require('colors');
+const log = require('loglevel');
+log.setDefaultLevel(log.levels.INFO);
 
-var manifestFolderName = '.';
+const Manifest = require('./Manifest');
 
-var requiredFields = [
-    { name: 'name' },
-    { name: 'description' },
-    { name: 'icons.48' },
-    { name: 'developer.name' },
-    { name: 'launch_path', default: 'index.html' },
-    { name: 'default_locale', default: 'en' } 
-];
+const arg = '.' + __filename.substr(__filename.lastIndexOf('/'));
+const args = require('minimist')(process.argv.slice(2), {
+    alias: {
+        debug: ['d'],
+        help: ['h', '?'],
+        ugly: ['u'],
 
-var manifestTemplate = {
-    'version':'0.0.1',
-    'name': '',
-    'description': '',
-    'icons':{
-        '16': undefined,
-        '48': 'img/icons/icon.png',
-        '128': undefined
+        'out': ['m'],
+        'in': ['package', 'p'],
+
+        'manifest.version': ['version', 'v'],
+        'manifest.name': ['name', 'n'],
+        'manifest.description': ['description', 'descr', 'desc'],
+        'manifest.developer.name': ['developer', 'dev', 'author', 'a'],
+        'manifest.developer.email': ['email', 'e'],
+        'manifest.developer.url': ['url', 'homepage', 'web'],
+        'manifest.developer.company': ['company'],
+        'manifest.icons.48': ['icons.48', 'icon'],
+        'manifest.launch_path': ['launch_path', 'launch', 'index'],
+        'manifest.installs_allowed_from': ['installs_allowed_from', 'allow', 'allowed', 'allow_from', 'allowed_from'],
+        'manifest.default_locale': ['default_locale', 'locale', 'l'],
+        'manifest.activities.dhis.href': ['href']
     },
-    'developer':{
-        'url':'',
-        'name':'James Chang',
-        'company': undefined,
-        'email': undefined
-    },
-    'launch_path': 'index.html',
-    'installs_allowed_from': undefined,
-    'default_locale': 'en',
-    'activities': {
-      'dhis': { 
-        'href': '*'
-      }
-    }
-};
-
-var manifest = {
-    'version':'0.0.1',
-    'name': '',
-    'description': '',
-    'icons':{
-        '16': undefined,
-        '48': 'img/icons/icon.png',
-        '128': undefined
-    },
-    'developer':{
-        'url':'',
-        'name':'James Chang',
-        'company': undefined,
-        'email': undefined
-    },
-    'launch_path': 'index.html',
-    'installs_allowed_from': undefined,
-    'default_locale': 'en',
-    'activities': {
-      'dhis': { 
-        'href': '*'
-      }
-    }
-};
-
-var rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
+    boolean: ['debug', 'help', 'interactive'],
 });
 
-function printMessage(message, surroundWithNewLines) {
-    if (surroundWithNewLines) console.log();
-    console.log(colors.cyan(message || ''));
-    if (surroundWithNewLines) console.log();
+const defaultValues = {
+    version: '0.0.1',
+    icons: {
+        48: 'icon.png',
+    },
+    launch_path: 'index.html',
+    default_locale: 'en',
+    activities: { dhis: { href: '*' } }
+};
+
+if(args.debug) {
+    log.setLevel(log.levels.TRACE);
 }
 
-function printError(message) {
-    console.log();
-    console.log(colors.red(message));
-    console.log();
+const packagePath = args._.length > 0 ? args._[0] : args.in;
+const manifestPath = args._.length > 1 ? args._[1] : args.out;
+
+if(!packagePath || !manifestPath) {
+    args.help = true;
 }
 
-function isRequiredField(field) {
-    return (requiredFields.indexOf(field) >= 0 ? true : false);
+if(args.help) {
+    const helpMessage = `
+    Usage: ${arg} [options] [-p] <package> [-m] <manifest>
+
+    Options:
+      -d, --debug                        Print debug messages
+      -h, --help                         Print usage information and exit
+      -u, --ugly                         Don't pretty-print the manifest
+      -m <path>                          Write the manifest to <path>
+      -p <path>                          Read npm package info from <path>
+
+    Specifying manifest contents:
+      -v, --version <value>              Use <value> for the version field
+      -n, --name <value>                 Use <value> for the name field
+      -d, --desc, --description <value>  Use <value> for the description field
+      --dev, --developer <value>         Use <value> for the developer field
+                                         This will be parsed the same way as people fields in
+                                         package.json: "Name <email> (url)"
+      --icon <value>                     Use <value> as the path for the 48x48 icon field
+      --launch_path, --launch <value>    Use <value> for the launch_path field
+      --allow-from, -allow <value>       Use <value> for the installs_allowed_from field
+      -l, --locale <value>               Use <value> for the default_locale field
+
+    In addition, any option that starts with "manifest." will be added to the manifest
+    For example, specifying "--manifest.foo bar" would add a field called "foo" with the value "bar"
+    `;
+    log.info(helpMessage.split('\n').map(line => line.substring(4)).join('\n'));
+    process.exit(1);
 }
+
+let manifest = new Manifest(defaultValues);
+manifest
+    .merge(Manifest.readPackageFile(packagePath))
+    .merge(args.manifest)
+    .clean();
+
+if (!manifest.isValid()) {
+    log.error('Manifest validation: '.cyan + '✗'.red + ' fail');
+    log.error('Missing fields:'.red, manifest.getMissingFields().join(', '));
+    process.exit(1);
+}
+log.info('Manifest validation: '.cyan + '✓'.green + ' ok');
+
+manifest.write(manifestPath, args.ugly);
+process.exit(0);
+
+let rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
 
 function getAdditionalFields(source, itemContext) {
-    var fields = [];
-    var item;
+    let fields = [];
+    let item;
 
     if (!source) {
         return [];
@@ -103,7 +124,7 @@ function getAdditionalFields(source, itemContext) {
                 fields.push(item);
             }
         } else {
-            var prefix = '';
+            let prefix = '';
             if (itemContext) {
                 prefix = itemContext + '.';
             }
@@ -116,24 +137,24 @@ function getAdditionalFields(source, itemContext) {
 }
 
 function getContext(field) {
-    var depth = field.name.split('.');
-    var context = manifest;
+    let depth = field.name.split('.');
+    let context = manifest;
 
-    while(depth.length > 0) {
-        var item = depth.shift();
+    while (depth.length > 0) {
+        let item = depth.shift();
         if (typeof context[item] !== 'object') {
             return context;
         }
         context = manifest[item];
     }
-    return context; //Not sure if needed..
+    return context;
 }
 
 function replaceField(field, answer) {
-    var context = getContext(field);
+    let context = getContext(field);
 
     if (answer === '') {
-        answer = field.default || undefined; //Undefined removes the value
+        answer = field.default || undefined; // Undefined removes the value
     }
     field = field.name.split('.').reverse()[0];
 
@@ -141,21 +162,16 @@ function replaceField(field, answer) {
 }
 
 
-var hasIllegalInput = (function () {
-    var regex = /^[\.0-9a-zA-Z\u00c0-\u017e\s\=\&\?\:\;\/]+$/i;
+function hasIllegalInput(input) {
+    const regex = /^[\.0-9a-zA-Z\u00c0-\u017e\s\=\&\?\:\;\/]+$/i;
 
-    return function (input) {
-        if (!regex.test(input)) {
-            return true;
-        }
-        return false;
-    }
-})();
+    return !regex.test(input);
+}
 
 function askForValueFor(field) {
     rl.question('New value for ' + field.name + ': ', function (answer) {
 
-        if ((isRequiredField(field.name) && hasIllegalInput(answer))) {
+        if ((Manifest.isRequiredField(field.name) && hasIllegalInput(answer))) {
             console.error('Empty or incorrect input for this field is not allowed');
         } else {
             if (answer === '') {
@@ -163,30 +179,28 @@ function askForValueFor(field) {
             } else {
                 replaceField(field, answer);
             }
-            
+
         }
 
-        askForAdditionalFields();   
+        askForAdditionalFields();
     });
 }
 
 function askForAdditionalFields() {
-    var additionalFields = getAdditionalFields(manifestTemplate);
-    console.log('');
-    printMessage('Your current manifest looks like: ');
-    console.log(colors.gray(JSON.stringify(manifest, undefined, 2)));
-    console.log('');
-    printMessage('If you want to change any of the following fields enter the number: ');
+    let additionalFields = getAdditionalFields(manifestTemplate);
+    log.info('\nYour current manifest looks like: '.green);
+    log.info(JSON.stringify(manifest, undefined, 2).gray);
+    log.info('If you want to change any of the following fields enter the number:'.green);
 
     additionalFields.forEach(function (field, index) {
-        console.log(colors.red((index >= 10 ? index : ' ' + index)) + ': ' + field);
+        log.info(colors.red((index >= 10 ? index : ' ' + index)) + ': ' + field);
     });
-    console.log('');
+    log.info('');
 
-    printMessage('s: To save as "manifest.webapp" (Program will quit after save)');
-    printMessage('q: To quit');
+    log.info('s: To save as "manifest.webapp" (Program will quit after save)'.cyan);
+    log.info('q: To quit'.cyan);
     rl.question('Enter a number to edit or one of the commands above: ', function (answer) {
-        var fieldName;
+        let fieldName;
 
         if (answer == 'q') {
             rl.close();
@@ -198,128 +212,51 @@ function askForAdditionalFields() {
             saveManifest();
         } else {
             if (fieldName = additionalFields[parseInt(answer, 10)]) {
-                askForValueFor({ name: fieldName });
+                askForValueFor({name: fieldName});
             } else {
-                printError('Please enter a number between 0-' + (additionalFields.length - 1) + ' or \'s\' to save.');
-                askForAdditionalFields(); 
+                log.error('Please enter a number between 0-' + (additionalFields.length - 1) + ' or \'s\' to save.'.red);
+                askForAdditionalFields();
             }
         }
     });
 }
 
-function askQuestions() {    
-    var field;
-    
+function askQuestions() {
+    let field;
+
     if (requiredFields.length <= 0) {
-        printMessage('Thanks!', true);
-        
+        log.info('Thanks!'.green, true);
+
         askForAdditionalFields();
         return;
     }
 
     field = requiredFields.shift();
 
-    rl.question(field.name + ( field.default ? '(' + field.default + ')' : '') + ': ', function(answer) {
-        if (!isRequiredField(field) || (!hasIllegalInput(answer)) || (answer === '' && field.default)) {
+    rl.question(field.name + ( field.default ? '(' + field.default + ')' : '') + ': ', function (answer) {
+        if (!Manifest.isRequiredField(field) || (!hasIllegalInput(answer)) || (answer === '' && field.default)) {
             replaceField(field, answer || field.default);
         } else {
-            printError('Empty or incorrect input for this field is not allowed');
+            log.error('Empty or incorrect input for this field is not allowed'.red);
             requiredFields.unshift(field);
         }
         askQuestions();
     });
 }
-
+/* TODO: Remove dead code
 function createNew() {
-    printMessage('Please answer the following. What would you like to use as:');
-    printMessage('- When a default is shown between () an empty value will use the default.')
+    log.info('Please answer the following. What would you like to use as:'.cyan);
+    log.info('- When a default is shown between () an empty value will use the default.'.cyan);
     askQuestions();
 }
-
+*/
 function saveManifest() {
-    fs.writeFile([manifestFolderName, 'manifest.webapp'].join('/'), JSON.stringify(manifest), function (err) {
+    fs.writeFile(args.manifest, JSON.stringify(manifest), function (err) {
         if (err) {
-            printError(err);
+            log.error('Error:'.red, err);
         } else {
-            printMessage('Manifest saved!');
+            log.info('Manifest saved!'.green);
         }
         rl.close();
     });
 }
-
-function getVersion() {
-    var versionParts = manifest.version.split('.');
-    var version = {
-        major: parseInt(versionParts[0], 10),
-        minor: parseInt(versionParts[1], 10),
-        patch: parseInt(versionParts[2], 10),
-    }
-    return version;
-}
-
-function bumpVersion(versionType) {
-    var version = getVersion();
-    var versionArray = [];
-
-    if (versionType === 'patch') {
-        if (version.patch >= 0) version.patch += 1;
-    }
-
-    if (versionType === 'minor') {
-        if (version.minor >= 0) version.minor += 1;
-        if (version.patch >= 0) version.patch = 0;
-    }
-
-    if (versionType === 'major') {
-        version.major += 1;
-        if (version.minor >= 0) version.minor = 0;
-        if (version.patch >= 0) version.patch = 0;
-    }
-
-    if (version.major >= 0) versionArray.push(version.major);
-    if (version.minor >= 0) versionArray.push(version.minor);
-    if (version.patch >= 0) versionArray.push(version.patch);
-
-
-    printMessage('Bumped version to: ' + versionArray.join('.'), true);
-    replaceField({ name: 'version' }, versionArray.join('.'));
-    saveManifest();
-}
-
-function checkAction() {
-    if (argv.bump || argv.b) {
-        bumpVersion(argv.bump || argv.b);
-    } else {
-        askForAdditionalFields();
-    }
-}
-
-printMessage();
-printMessage('Attempting to find existing manifest file.');
-
-fs.readFile('./manifest.webapp', 'utf8', function (err, data) {
-  if (err) {
-    console.log('-- Manifest file not found in the root of the project, checking /src folder.');
-    fs.readFile('./src/manifest.webapp', 'utf8', function (err, data) {
-        if (err) {
-            console.log('- Manifest file not found or corrupted, creating a new one.');
-            console.log('');
-            createNew();
-            return;
-        }
-
-        console.log('-- Found manifest file in /src folder');
-        manifestFolderName = './src';
-        console.log('');
-        manifest = JSON.parse(data);
-        checkAction();
-        rl.close();
-    });
-    return;
-  }
-
-  console.log('- Existing manifest found, using existing manifest.');
-  console.log('');
-  manifest = JSON.parse(data);
-  checkAction();
-});
