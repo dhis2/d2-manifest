@@ -1,8 +1,8 @@
 {
   "name": "d2-manifest",
   "version": "0.0.2",
+  "description": "App manifest generator for DHIS 2 Web Apps",
   "homepage": "https://www.dhis2.org",
-  "description": "A app manifest creator for dhis2",
   "main": "d2-manifest.js",
   "bin": {
     "d2-manifest": "./d2-manifest.js"
@@ -24,7 +24,23 @@
     "Mark Polak <mark@dhis2.org>",
     "Nicolay Ramm <nicolay@dhis2.org>"
   ],
+  "bugs": {
+    "url": "https://github.com/dhis2/d2-manifest/issues"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "webapp.manifest": {
     "version": ""
-  }
+  },
+  "keywords": [
+    "dhis",
+    "dhis2",
+    "hisp",
+    "webapp",
+    "webapps",
+    "manifest",
+    "d2"
+  ]
 }
