@@ -9,7 +9,6 @@ log.setDefaultLevel(log.levels.INFO);
 
 const Manifest = require('./Manifest');
 
-const arg = '.' + __filename.substr(__filename.lastIndexOf('/'));
 const args = require('minimist')(process.argv.slice(2), {
     alias: {
         debug: ['d'],
@@ -32,7 +31,7 @@ const args = require('minimist')(process.argv.slice(2), {
         'manifest.default_locale': ['default_locale', 'locale', 'l'],
         'manifest.activities.dhis.href': ['href']
     },
-    boolean: ['debug', 'help', 'interactive'],
+    boolean: ['debug', 'help', 'interactive', 'ugly'],
 });
 
 const defaultValues = {
@@ -57,6 +56,7 @@ if(!packagePath || !manifestPath) {
 }
 
 if(args.help) {
+    const arg = '.' + __filename.substr(__filename.lastIndexOf('/'));
     const helpMessage = `
     Usage: ${arg} [options] [-p] <package> [-m] <manifest>
 
