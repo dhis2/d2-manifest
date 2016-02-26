@@ -14,6 +14,7 @@ const args = require('minimist')(process.argv.slice(2), {
         debug: ['d'],
         help: ['h', '?'],
         ugly: ['u'],
+        interactive: ['i'],
 
         'out': ['m'],
         'in': ['package', 'p'],
@@ -46,19 +47,13 @@ const defaultValues = {
 
 if(args.debug) {
     log.setLevel(log.levels.TRACE);
-}
-
-const packagePath = args._.length > 0 ? args._[0] : args.in;
-const manifestPath = args._.length > 1 ? args._[1] : args.out;
-
-if(!packagePath || !manifestPath) {
-    args.help = true;
+    log.debug('Debug mode enabled'.magenta);
 }
 
 if(args.help) {
     const arg = '.' + __filename.substr(__filename.lastIndexOf('/'));
     const helpMessage = `
-    Usage: ${arg} [options] [-p] <package> [-m] <manifest>
+    Usage: ${arg} [options] [[-p] package] [[-m] manifest]
 
     Options:
       -d, --debug                        Print debug messages
@@ -71,35 +66,57 @@ if(args.help) {
       -v, --version <value>              Use <value> for the version field
       -n, --name <value>                 Use <value> for the name field
       -d, --desc, --description <value>  Use <value> for the description field
-      --dev, --developer <value>         Use <value> for the developer field
-                                         This will be parsed the same way as people fields in
-                                         package.json: "Name <email> (url)"
-      --icon <value>                     Use <value> as the path for the 48x48 icon field
+      --dev, --developer <value>         Use <value> for the developer.name field
+                                         It's also possible to specify the developer.email
+                                         and developer.url fields here, in the same way as
+                                         people fields in package.json: "Name <email> (url)"
+      --icon <value>                     Use <value> for the 48x48 icon field (icons.48)
       --launch_path, --launch <value>    Use <value> for the launch_path field
       --allow-from, -allow <value>       Use <value> for the installs_allowed_from field
       -l, --locale <value>               Use <value> for the default_locale field
 
-    In addition, any option that starts with "manifest." will be added to the manifest
-    For example, specifying "--manifest.foo bar" would add a field called "foo" with the value "bar"
+    In addition to the above, any option that starts with "--manifest.*" will be added to
+    the manifest. For example, specifying "--manifest.foo bar" would add a field called
+    "foo" with the value "bar".
     `;
     log.info(helpMessage.split('\n').map(line => line.substring(4)).join('\n'));
     process.exit(1);
 }
 
-let manifest = new Manifest(defaultValues);
-manifest
-    .merge(Manifest.readPackageFile(packagePath))
-    .merge(args.manifest)
-    .clean();
+
+const packagePath = args._.length > 0 ? args._[0] : args.in;
+const manifestPath = args._.length > 1 ? args._[1] : args.out;
+const manifest = new Manifest(defaultValues);
+
+if(packagePath) {
+    log.info('Reading package data: '.cyan + packagePath);
+    manifest.merge(Manifest.readPackageFile(packagePath));
+} else {
+    log.debug('No package path specified'.magenta);
+}
+
+if(args.manifest) {
+    log.debug('Merging data from arguments:'.magenta);
+    manifest.merge(args.manifest, true);
+} else {
+    log.debug('No manifest data in arguments'.magenta);
+}
 
 if (!manifest.isValid()) {
-    log.error('Manifest validation: '.cyan + '✗'.red + ' fail');
-    log.error('Missing fields:'.red, manifest.getMissingFields().join(', '));
+    log.error('Validating manifest: '.cyan + '✗'.red + ' Error');
+    log.error('Error:'.red + ' The following required fields were missing: ' + manifest.getMissingFields().join(', '));
     process.exit(1);
 }
-log.info('Manifest validation: '.cyan + '✓'.green + ' ok');
+log.info('Validating manifest: '.cyan + '✓'.green + ' Ok');
 
-manifest.write(manifestPath, args.ugly);
+if(manifestPath) {
+    log.debug(`Writing manifest to ${manifestPath}`.magenta);
+    manifest.write(manifestPath, args.ugly);
+} else {
+    log.debug('No target file specified, printing to stdout'.magenta);
+    log.info('Generated manifest:'.green);
+    log.info(manifest.getJSON());
+}
 process.exit(0);
 
 let rl = readline.createInterface({
