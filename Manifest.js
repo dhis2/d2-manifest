@@ -118,7 +118,7 @@ class Manifest {
                 const fields = key.split('.');
                 const object = fields.shift();
 
-                return !(isValid(this[object], fields));
+                return !(this.hasOwnProperty(object) && isValid(this[object], fields));
             }
 
             return !(this.hasOwnProperty(key) && this[key] !== undefined && this[key] !== '');
@@ -143,10 +143,8 @@ class Manifest {
      * @param {boolean} ugly
      */
     write(filename, ugly) {
-        log.info('Writing manifest to:'.cyan, filename);
         try {
             fs.writeFileSync(filename, this.getJSON(ugly == true));
-            log.info('Success!'.green);
         } catch (e) {
             log.error('Failed to write to file:'.red, e.message);
         }

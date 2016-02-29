@@ -110,8 +110,9 @@ if (!manifest.isValid()) {
 log.info('Validating manifest: '.cyan + '✓'.green + ' Ok');
 
 if(manifestPath) {
-    log.debug(`Writing manifest to ${manifestPath}`.magenta);
+    log.info('Writing manifest to:'.cyan, manifestPath);
     manifest.write(manifestPath, args.ugly);
+    log.info('Done!'.cyan);
 } else {
     log.debug('No target file specified, printing to stdout'.magenta);
     log.info('Generated manifest:'.green);
