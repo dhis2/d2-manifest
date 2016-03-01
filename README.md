@@ -1,20 +1,87 @@
-# d2-manifest
-Simple node package to manage `manifest.webapp` files for DHIS2 apps
 
-```sh
-npm install -g d2-manifest
+D2 Manifest
+===========
+
+D2 Manifest is a node app that helps generate manifests for DHIS2 apps.
+
+Two modes of operation are supported: Automatic and interactive (manual).
+
+Automatic mode is intended to be used during the build step of webapps. In this mode,
+field values are read from `package.json` as well as (optionally) from the command line.
+The manifest is then verified, before it's written to the target manifest file,
+typically `manifest.webapp`.
+
+In interactive mode, initial field values may also be read from both `package.json` and
+the command line. Then the user will be given the opportunity to add, change and delete
+fields in the manifest before saving it to a file.
+
+
+
+Using D2 Manifest in your app
+-----------------------------
+
+The typical usage scenario for d2-manifest is to use it to automatically generate the
+manifest for your webapp during the build step. This guide assumes that you are using
+npm both for dependency management and to build your app.
+
+Install d2-manifest as a development dependency (or optionally as a normal dependency):
+
+`npm install --save-dev d2-manifest`
+
+By default `package.json` does not contain all the fields that are needed to generate
+the manifest. Additionally, you may want to specify different values for some fields in
+the manifest than what's used by `package.json`. Both of these issues can be resolved by
+adding a new field to `package.json` called `manifest.webapp`. Any fields specified on
+this object will override any values read from the base object in `package.json`.
+
+For example:
+
+```json
+{
+  "version": "1.2.3",
+  "name": "my-npm-compatible-package-name",
+  "description": "An example app",
+  "scripts": {
+    "build": "build-my-app && d2-manifest package.json build/manifest.webapp"
+  },
+  // ... various other fields
+  "manifest.webapp": {
+    "name": "My Example App for DHIS2",
+    "icons": {
+      "48": "icon.png"
+    },
+    "developer": {
+      "name": "My Name",
+      "email": "e@ma.il"
+    },
+    "activities": {
+      "dhis": {
+        "href": ".."
+      }
+    },
+    "launch_url": "app.html",
+    "default_locale": "en"
+  }
+}
 ```
 
-Basic usage to create a new manifest or edit properties on a manifest
-```sh
-d2-manifest
-```
-It will look for a manifest.webapp file in the current directory and if not found in the `./src` directory.
+To generate a new `manifest.webapp` from `package.json`, do:
 
-A simple convenient option can be given to change just the version number in the manifest.
-```sh
-# Version types<major|minor|patch> 
-d2-manifest --bump major
-d2-manifest --bump minor
-d2-manifest --bump patch
+`./node_modules/.bin/d2-manifest package.json build/manifest.webapp`
+
+You can also specify additional fields on the command line. Fields specified on the
+command line always override values read from any other source. Additionally, giving a
+field an empty value (`""`) on the command line will effectively remove that field from
+the manifest:
+
 ```
+./node_modules/.bin/d2-manifest package.json build/manifest.webapp \
+      --manifest.name="Super Cool App Name"
+```
+
+Given the `package.json` above, and assuming that `build-my-app` is the command you use
+to build your app, you could build your app and generate the manifest with the following
+command:
+
+`npm run-script build`
+
