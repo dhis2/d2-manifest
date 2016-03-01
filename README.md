@@ -17,6 +17,30 @@ fields in the manifest before saving it to a file.
 
 
 
+Basic usage
+-----------
+
+Basic usage is documented in d2-manifest itself. Using the following command d2-manifest
+can be made available globally:
+
+`npm install -g d2-manifest`
+
+You can then get usage information with the following command:
+
+`d2-manifest --help`
+
+In its simplest form, d2-manifest will read a source file and command line arguments, and
+write a manifest to a target file. If no source file is specified, some fields will be
+given default values. If no target file is specified, the manifest will be written to
+stdout.
+
+Interactive mode can be enabled by specifying `--interactive` (or `-i` for short) on the
+command line. For example:
+
+`d2-manifest -i package.json`
+
+
+
 Using D2 Manifest in your app
 -----------------------------
 
@@ -84,4 +108,3 @@ to build your app, you could build your app and generate the manifest with the f
 command:
 
 `npm run-script build`
-
