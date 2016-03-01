@@ -23,16 +23,34 @@ const args = require('minimist')(process.argv.slice(2), {
         'manifest.version': ['version', 'v'],
         'manifest.name': ['name', 'n'],
         'manifest.description': ['description', 'descr', 'desc'],
-        'manifest.developer.name': ['developer', 'dev', 'author', 'a'],
-        'manifest.developer.email': ['email', 'e'],
-        'manifest.developer.url': ['url', 'homepage', 'web'],
+        'manifest.developer.name': ['developer', 'dev', 'author'],
+        'manifest.developer.email': ['email'],
+        'manifest.developer.url': ['url', 'homepage'],
         'manifest.developer.company': ['company'],
+        'manifest.icons.16': ['icons.16'],
         'manifest.icons.48': ['icons.48', 'icon'],
-        'manifest.launch_path': ['launch_path', 'launch', 'index'],
+        'manifest.icons.128': ['icons.128'],
+        'manifest.launch_path': ['launch_path', 'index'],
         'manifest.installs_allowed_from': ['installs_allowed_from', 'allow', 'allowed', 'allow_from', 'allowed_from'],
         'manifest.default_locale': ['default_locale', 'locale', 'l'],
         'manifest.activities.dhis.href': ['href']
     },
+    string: [
+        'manifest.version', 'version', 'v',
+        'manifest.name', 'name', 'n',
+        'manifest.description', 'description', 'descr', 'desc',
+        'manifest.developer.name', 'developer', 'dev', 'author',
+        'manifest.developer.email', 'email',
+        'manifest.developer.url', 'url', 'homepage',
+        'manifest.developer.company', 'company',
+        'manifest.icons.16', 'icons.16',
+        'manifest.icons.48', 'icon', 'icons.48',
+        'manifest.icons.128', 'icons.128',
+        'manifest.launch_path', 'launch_path', 'index',
+        'manifest.installs_allowed_from', 'installs_allowed_from', 'allow', 'allowed', 'allow_from', 'allowed_from',
+        'manifest.default_locale', 'default_locale', 'locale', 'l',
+        'manifest.activities.dhis.href', 'href',
+    ],
     boolean: ['debug', 'help', 'interactive', 'ugly'],
 });
 
@@ -69,7 +87,7 @@ if(args.help) {
                                          and developer.url fields here, in the same way as
                                          people fields in package.json: "Name <email> (url)"
       --icon <value>                     Use <value> for the 48x48 icon field (icons.48)
-      --launch_path, --launch <value>    Use <value> for the launch_path field
+      --launch_path, --index <value>     Use <value> for the launch_path field
       --allow-from, -allow <value>       Use <value> for the installs_allowed_from field
       -l, --locale <value>               Use <value> for the default_locale field
 
@@ -98,6 +116,7 @@ if(packagePath) {
 
 if(args.manifest) {
     log.debug('Merging data from arguments:'.magenta);
+    log.debug(JSON.stringify(args.manifest, null, 2));
     manifest.merge(args.manifest, true);
 } else {
     log.debug('No manifest data in arguments'.magenta);
