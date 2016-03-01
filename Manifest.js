@@ -8,6 +8,11 @@ const isPlainObject = require('lodash.isplainobject');
 
 
 class Manifest {
+    /**
+     * Manifest constructor
+     *
+     * @param data Object containing initial data for the manifest
+     */
     constructor(data) {
         Object.assign(this, data);
 
@@ -69,6 +74,14 @@ class Manifest {
     }
 
 
+    /**
+     * Helper method to recursively set the value of a field
+     *
+     * @param object
+     * @param fields
+     * @param value
+     * @private
+     */
     static _setFieldValue(object, fields, value) {
         if (!Array.isArray(fields) || fields.length === 0) {
             throw new Error('fields must be an array');
@@ -95,6 +108,12 @@ class Manifest {
     }
 
 
+    /**
+     * Set the value of the specified field
+     *
+     * @param fieldName The name of the field to add or modify, in dot notation (field.subfield.etc)
+     * @param value
+     */
     setFieldValue(fieldName, value) {
         if (fieldName === 'developer.name') {
             value = Manifest.parseAuthor(value);
@@ -105,6 +124,14 @@ class Manifest {
     }
 
 
+    /**
+     * Helper method to recursively get the value of a field
+     *
+     * @param object
+     * @param fields Array of field names
+     * @returns {string}
+     * @private
+     */
     static _getFieldValue(object, fields) {
         if (!Array.isArray(fields) || fields.length === 0) {
             throw new Error('fields must be an array');
@@ -117,6 +144,13 @@ class Manifest {
         }
     }
 
+
+    /**
+     * Get the value of the specified field name
+     *
+     * @param fieldName A field name, in dot notation (field.subfield.etc)
+     * @returns {*}
+     */
     getFieldValue(fieldName) {
         return Manifest._getFieldValue(this, fieldName.split('.'));
     }
@@ -238,6 +272,11 @@ class Manifest {
     }
 
 
+    /**
+     * Return a list of all known optional fields that aren't specified for the current manifest
+     *
+     * @returns {string[]}
+     */
     getEmptyOptionalFields() {
         return Manifest._checkFields(this, Manifest.getOptionalFields());
     }
@@ -283,6 +322,13 @@ class Manifest {
             if (pkg.version) out.version = pkg.version;
             if (pkg.description) out.description = pkg.description;
             if (pkg.author) out.developer = Manifest.parseAuthor(pkg.author);
+
+            // Additional fields to support manifests as source
+            if (pkg.icons) out.icons = Object.assign({}, pkg.icons);
+            if (!out.developer && pkg.developer) out.developer = Object.assign({}, pkg.developer);
+            if (pkg['launch_path']) out['launch_path'] = pkg['launch_path'];
+            if (pkg['default_locale']) out['default_locale'] = pkg['default_locale'];
+            if (pkg.activities) out.activities = Object.assign({}, pkg.activities);
 
             if (pkg.hasOwnProperty('webapp.manifest')) {
                 Object.assign(out, pkg['webapp.manifest']);
