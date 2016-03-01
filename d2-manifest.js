@@ -8,7 +8,7 @@ const log = require('loglevel');
 log.setDefaultLevel(log.levels.INFO);
 
 const Manifest = require('./Manifest');
-const interactive = require('./interactive');
+//const interactive = require('./interactive');
 
 const args = require('minimist')(process.argv.slice(2), {
     alias: {
@@ -129,5 +129,5 @@ if(!args.interactive) {
 
     process.exit(0);
 } else {
-    interactive(manifest, manifestPath, args.ugly === true);
+    require('./interactive')(manifest, manifestPath, args.ugly === true);
 }
