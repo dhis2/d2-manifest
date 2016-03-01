@@ -17,7 +17,8 @@
     "colors": "^1.0.3",
     "lodash.isplainobject": "^4.0.3",
     "loglevel": "^1.4.0",
-    "minimist": "^1.1.0"
+    "minimist": "^1.1.0",
+    "readline-sync": "^1.4.1"
   },
   "author": "DHIS 2 Core Developers (https://www.github.com/dhis2/d2-manifest)",
   "contributors": [

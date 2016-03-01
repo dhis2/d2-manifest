@@ -13,6 +13,8 @@ class Manifest {
 
         this.write = this.write.bind(this);
         this.merge = this.merge.bind(this);
+        this.setFieldValue = this.setFieldValue.bind(this);
+        this.getFieldValue = this.getFieldValue.bind(this);
 
         this.isValid = this.isValid.bind(this);
         this.getMissingFields = this.getMissingFields.bind(this);
@@ -57,13 +59,66 @@ class Manifest {
                     }
                     const cleanData = force ? data[key] : this._cleanObject(data[key]);
                     this[key] = Object.assign({}, this[key], cleanData);
-                } else if(data[key] || force) {
+                } else if (data[key] || force) {
                     this[key] = data[key];
                 }
             });
         }
 
         return this;
+    }
+
+
+    static _setFieldValue(object, fields, value) {
+        if (!Array.isArray(fields) || fields.length === 0) {
+            throw new Error('fields must be an array');
+        }
+
+        if (fields.length > 1) {
+            if (!object.hasOwnProperty(fields[0])) {
+                object[fields[0]] = {};
+                Manifest._setFieldValue(object[fields[0]], fields.splice(1), value);
+            } else {
+                if (!isPlainObject(object[fields[0]])) {
+                    throw new Error('field is not an object');
+                }
+
+                Manifest._setFieldValue(object[fields[0]], fields.splice(1), value);
+            }
+        } else {
+            if (value) {
+                object[fields[0]] = value;
+            } else {
+                delete object[fields[0]];
+            }
+        }
+    }
+
+
+    setFieldValue(fieldName, value) {
+        if (fieldName === 'developer.name') {
+            value = Manifest.parseAuthor(value);
+            Manifest._setFieldValue(this, ['developer'], value);
+        } else {
+            Manifest._setFieldValue(this, fieldName.split('.'), value);
+        }
+    }
+
+
+    static _getFieldValue(object, fields) {
+        if (!Array.isArray(fields) || fields.length === 0) {
+            throw new Error('fields must be an array');
+        }
+
+        if (fields.length > 1) {
+            return object.hasOwnProperty(fields[0]) ? Manifest._getFieldValue(object[fields[0]], fields.splice(1)) : '';
+        } else {
+            return object.hasOwnProperty(fields[0]) ? object[fields[0]] : '';
+        }
+    }
+
+    getFieldValue(fieldName) {
+        return Manifest._getFieldValue(this, fieldName.split('.'));
     }
 
 
@@ -97,32 +152,94 @@ class Manifest {
 
 
     /**
+     * Return a list of optional fields
+     *
+     * @returns {string[]}
+     */
+    static getOptionalFields() {
+        return [
+            'icons.16',
+            'icons.128',
+            'developer.email',
+            'developer.url',
+            'developer.company'
+        ];
+    }
+
+
+    /**
+     * Return a list of all known and optional fields
+     *
+     * @returns {string[]} List of field names
+     */
+    static getAllKnownFields() {
+        return Manifest.getRequiredFields().concat(Manifest.getOptionalFields());
+    }
+
+
+    /**
+     * Recursively check if the specified field has a valid value
+     *
+     * @param target The target object to check
+     * @param fields The name of the field to check, in dot notation (field.subfield)
+     * @returns {boolean} True if the field exists and is not empty
+     * @private
+     */
+    static _isValidField(target, fields) {
+        if (Array.isArray(fields) && fields.length > 1) {
+            const field = fields.shift();
+            return target && target.hasOwnProperty(field) && isPlainObject(target[field]) && Manifest._isValidField(target[field], fields);
+        }
+
+        return !!target[fields[0]];
+    }
+
+
+    /**
+     * Check if the specified fields on the target object exist and are not empty
+     *
+     * @param target The target object to check
+     * @param fieldNames A list of field names to check, in dot notation (field.subfield)
+     * @returns {string[]} A list of fields that are not present or have no value
+     * @private
+     */
+    static _checkFields(target, fieldNames) {
+        return fieldNames.filter(fieldName => {
+            if (fieldName.indexOf('.') > 0) {
+                const fields = fieldName.split('.');
+                const object = fields.shift();
+
+                return !(target.hasOwnProperty(object) && Manifest._isValidField(target[object], fields));
+            }
+
+            return !(target.hasOwnProperty(fieldName) && target[fieldName] !== undefined && target[fieldName] !== '');
+        })
+    }
+
+
+    /**
+     * Return a list of all available fields for the current manifest, with required fields sorted
+     * before optional ones
+     *
+     * @returns {string[]} List of field names
+     */
+    getAllEmptyFields() {
+        return Manifest._checkFields(this, Manifest.getRequiredFields())
+            .concat(Manifest._checkFields(this, Manifest.getOptionalFields()));
+    }
+
+    /**
      * Checks the current manifest against the list of required fields
      *
      * @returns {string[]} List of required fields that are missing
      */
     getMissingFields() {
-        const isValid = (object, fields) => {
-            if (Array.isArray(fields) && fields.length > 1) {
-                const field = fields.shift();
-                return object && object.hasOwnProperty(field) && isPlainObject(object[field]) && isValid(object[field], fields);
-            }
+        return Manifest._checkFields(this, Manifest.getRequiredFields());
+    }
 
-            return !!object[fields[0]];
-        };
 
-        log.debug('Checking for required fields:'.magenta);
-        return Manifest.getRequiredFields().filter(key => {
-            log.debug(`    - ${key}`);
-            if (key.indexOf('.') > 0) {
-                const fields = key.split('.');
-                const object = fields.shift();
-
-                return !(this.hasOwnProperty(object) && isValid(this[object], fields));
-            }
-
-            return !(this.hasOwnProperty(key) && this[key] !== undefined && this[key] !== '');
-        });
+    getEmptyOptionalFields() {
+        return Manifest._checkFields(this, Manifest.getOptionalFields());
     }
 
 
@@ -147,6 +264,7 @@ class Manifest {
             fs.writeFileSync(filename, this.getJSON(ugly == true));
         } catch (e) {
             log.error('Failed to write to file:'.red, e.message);
+            throw e;
         }
     }
 

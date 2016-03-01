@@ -8,6 +8,7 @@ const log = require('loglevel');
 log.setDefaultLevel(log.levels.INFO);
 
 const Manifest = require('./Manifest');
+const interactive = require('./interactive');
 
 const args = require('minimist')(process.argv.slice(2), {
     alias: {
@@ -36,10 +37,6 @@ const args = require('minimist')(process.argv.slice(2), {
 });
 
 const defaultValues = {
-    version: '0.0.1',
-    icons: {
-        48: 'icon.png',
-    },
     launch_path: 'index.html',
     default_locale: 'en',
     activities: { dhis: { href: '*' } }
@@ -58,6 +55,7 @@ if(args.help) {
     Options:
       -d, --debug                        Print debug messages
       -h, --help                         Print usage information and exit
+      -i, --interactive                  Enable interactive mode
       -u, --ugly                         Don't pretty-print the manifest
       -m <path>                          Write the manifest to <path>
       -p <path>                          Read npm package info from <path>
@@ -80,17 +78,20 @@ if(args.help) {
     "foo" with the value "bar".
     `;
     log.info(helpMessage.split('\n').map(line => line.substring(4)).join('\n'));
-    process.exit(1);
+    process.exit(0);
 }
 
 
 const packagePath = args._.length > 0 ? args._[0] : args.in;
 const manifestPath = args._.length > 1 ? args._[1] : args.out;
 const manifest = new Manifest(defaultValues);
+let rl;
 
 if(packagePath) {
     log.info('Reading package data: '.cyan + packagePath);
-    manifest.merge(Manifest.readPackageFile(packagePath));
+    const packageFile = Manifest.readPackageFile(packagePath);
+    log.debug(JSON.stringify(packageFile, null, 2));
+    manifest.merge(packageFile, false);
 } else {
     log.debug('No package path specified'.magenta);
 }
@@ -102,179 +103,31 @@ if(args.manifest) {
     log.debug('No manifest data in arguments'.magenta);
 }
 
-if (!manifest.isValid()) {
-    log.error('Validating manifest: '.cyan + '✗'.red + ' Error');
-    log.error('Error:'.red + ' The following required fields were missing: ' + manifest.getMissingFields().join(', '));
-    process.exit(1);
-}
-log.info('Validating manifest: '.cyan + '✓'.green + ' Ok');
+if(!args.interactive) {
+    log.debug('Interactive mode not enabled'.magenta);
 
-if(manifestPath) {
-    log.info('Writing manifest to:'.cyan, manifestPath);
-    manifest.write(manifestPath, args.ugly);
-    log.info('Done!'.cyan);
+    if (!manifest.isValid()) {
+        log.error('Validating manifest: '.cyan + '✗'.red + ' Error');
+        log.error('Error:'.red + ' The following required fields were missing: ' + manifest.getMissingFields().join(', '));
+        process.exit(1);
+    }
+    log.info('Validating manifest: '.cyan + '✓'.green + ' Ok');
+
+    if(manifestPath) {
+        log.info('Writing manifest to:'.cyan, manifestPath);
+        try {
+            manifest.write(manifestPath, args.ugly);
+            log.info('Done!'.cyan);
+        } catch (e) {
+            process.exit(1);
+        }
+    } else {
+        log.debug('No target file specified, printing to stdout'.magenta);
+        log.info('Generated manifest:'.green);
+        log.info(manifest.getJSON(args.ugly));
+    }
+
+    process.exit(0);
 } else {
-    log.debug('No target file specified, printing to stdout'.magenta);
-    log.info('Generated manifest:'.green);
-    log.info(manifest.getJSON());
-}
-process.exit(0);
-
-let rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-
-function getAdditionalFields(source, itemContext) {
-    let fields = [];
-    let item;
-
-    if (!source) {
-        return [];
-    }
-
-    for (item in source) {
-        if (source.hasOwnProperty(item) && typeof source[item] !== 'object') {
-            if (itemContext) {
-                fields.push(itemContext + '.' + item);
-            } else {
-                fields.push(item);
-            }
-        } else {
-            let prefix = '';
-            if (itemContext) {
-                prefix = itemContext + '.';
-            }
-            getAdditionalFields(source[item], item).forEach(function (value) {
-                fields.push(prefix + value);
-            });
-        }
-    }
-    return fields;
-}
-
-function getContext(field) {
-    let depth = field.name.split('.');
-    let context = manifest;
-
-    while (depth.length > 0) {
-        let item = depth.shift();
-        if (typeof context[item] !== 'object') {
-            return context;
-        }
-        context = manifest[item];
-    }
-    return context;
-}
-
-function replaceField(field, answer) {
-    let context = getContext(field);
-
-    if (answer === '') {
-        answer = field.default || undefined; // Undefined removes the value
-    }
-    field = field.name.split('.').reverse()[0];
-
-    context[field] = answer;
-}
-
-
-function hasIllegalInput(input) {
-    const regex = /^[\.0-9a-zA-Z\u00c0-\u017e\s\=\&\?\:\;\/]+$/i;
-
-    return !regex.test(input);
-}
-
-function askForValueFor(field) {
-    rl.question('New value for ' + field.name + ': ', function (answer) {
-
-        if ((Manifest.isRequiredField(field.name) && hasIllegalInput(answer))) {
-            console.error('Empty or incorrect input for this field is not allowed');
-        } else {
-            if (answer === '') {
-                replaceField(field, undefined);
-            } else {
-                replaceField(field, answer);
-            }
-
-        }
-
-        askForAdditionalFields();
-    });
-}
-
-function askForAdditionalFields() {
-    let additionalFields = getAdditionalFields(manifestTemplate);
-    log.info('\nYour current manifest looks like: '.green);
-    log.info(JSON.stringify(manifest, undefined, 2).gray);
-    log.info('If you want to change any of the following fields enter the number:'.green);
-
-    additionalFields.forEach(function (field, index) {
-        log.info(colors.red((index >= 10 ? index : ' ' + index)) + ': ' + field);
-    });
-    log.info('');
-
-    log.info('s: To save as "manifest.webapp" (Program will quit after save)'.cyan);
-    log.info('q: To quit'.cyan);
-    rl.question('Enter a number to edit or one of the commands above: ', function (answer) {
-        let fieldName;
-
-        if (answer == 'q') {
-            rl.close();
-            return;
-        }
-
-        if (answer == 's') {
-            //Save
-            saveManifest();
-        } else {
-            if (fieldName = additionalFields[parseInt(answer, 10)]) {
-                askForValueFor({name: fieldName});
-            } else {
-                log.error('Please enter a number between 0-' + (additionalFields.length - 1) + ' or \'s\' to save.'.red);
-                askForAdditionalFields();
-            }
-        }
-    });
-}
-
-function askQuestions() {
-    let field;
-
-    if (requiredFields.length <= 0) {
-        log.info('Thanks!'.green, true);
-
-        askForAdditionalFields();
-        return;
-    }
-
-    field = requiredFields.shift();
-
-    rl.question(field.name + ( field.default ? '(' + field.default + ')' : '') + ': ', function (answer) {
-        if (!Manifest.isRequiredField(field) || (!hasIllegalInput(answer)) || (answer === '' && field.default)) {
-            replaceField(field, answer || field.default);
-        } else {
-            log.error('Empty or incorrect input for this field is not allowed'.red);
-            requiredFields.unshift(field);
-        }
-        askQuestions();
-    });
-}
-/* TODO: Remove dead code
-function createNew() {
-    log.info('Please answer the following. What would you like to use as:'.cyan);
-    log.info('- When a default is shown between () an empty value will use the default.'.cyan);
-    askQuestions();
-}
-*/
-function saveManifest() {
-    fs.writeFile(args.manifest, JSON.stringify(manifest), function (err) {
-        if (err) {
-            log.error('Error:'.red, err);
-        } else {
-            log.info('Manifest saved!'.green);
-        }
-        rl.close();
-    });
+    interactive(manifest, manifestPath, args.ugly === true);
 }
