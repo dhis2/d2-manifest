@@ -330,8 +330,8 @@ class Manifest {
             if (pkg['default_locale']) out['default_locale'] = pkg['default_locale'];
             if (pkg.activities) out.activities = Object.assign({}, pkg.activities);
 
-            if (pkg.hasOwnProperty('webapp.manifest')) {
-                Object.assign(out, pkg['webapp.manifest']);
+            if (pkg.hasOwnProperty('manifest.webapp')) {
+                Object.assign(out, pkg['manifest.webapp']);
             }
 
             return out;
