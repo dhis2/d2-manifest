@@ -16,6 +16,7 @@ const args = require('minimist')(process.argv.slice(2), {
         help: ['h', '?'],
         ugly: ['u'],
         interactive: ['i'],
+        notimestamp: ['t'],
 
         'out': ['m'],
         'in': ['package', 'p'],
@@ -51,7 +52,7 @@ const args = require('minimist')(process.argv.slice(2), {
         'manifest.default_locale', 'default_locale', 'locale', 'l',
         'manifest.activities.dhis.href', 'href',
     ],
-    boolean: ['debug', 'help', 'interactive', 'ugly'],
+    boolean: ['debug', 'help', 'interactive', 'ugly','notimestamp'],
 });
 
 const defaultValues = {
@@ -75,6 +76,7 @@ if(args.help) {
       -h, --help                         Print usage information and exit
       -i, --interactive                  Enable interactive mode
       -u, --ugly                         Don't pretty-print the manifest
+      -t, --notimestamp                  Don't add 'manifest_generated_at' timestamp
       -m <path>                          Write the manifest to <path>
       -p <path>                          Read npm package info from <path>
 
@@ -104,6 +106,10 @@ const packagePath = args._.length > 0 ? args._[0] : args.in;
 const manifestPath = args._.length > 1 ? args._[1] : args.out;
 const manifest = new Manifest(defaultValues);
 let rl;
+
+if(!args.notimestamp) {
+    args.manifest.manifest_generated_at = (new Date).getTime();
+}
 
 if(packagePath) {
     log.info('Reading package data: '.cyan + packagePath);
