@@ -7,8 +7,7 @@ const colors = require('colors');
 const log = require('loglevel');
 log.setDefaultLevel(log.levels.INFO);
 
-const Manifest = require('./Manifest');
-//const interactive = require('./interactive');
+const Manifest = require('./src/Manifest');
 
 const args = require('minimist')(process.argv.slice(2), {
     alias: {
@@ -160,5 +159,5 @@ if(!args.interactive) {
 
     process.exit(0);
 } else {
-    require('./interactive')(manifest, manifestPath, args.ugly === true);
+    require('./src/interactive')(manifest, manifestPath, args.ugly === true);
 }

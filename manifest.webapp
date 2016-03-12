@@ -1,1 +1,0 @@
-{"version":"0.1.1","name":"My App","description":"Some description of my app","icons":{"48":"someIcon"},"developer":{"url":"http://www.dhis2.org","name":"Mark Polak","company":"DHIS2 Core team"},"launch_path":"index.html","default_locale":"en","activities":{"dhis":{"href":"*"}}}
