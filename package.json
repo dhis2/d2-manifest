@@ -1,6 +1,6 @@
 {
   "name": "d2-manifest",
-  "version": "1.0.0-1",
+  "version": "1.0.0-2",
   "description": "App manifest generator for DHIS 2 Web Apps",
   "homepage": "https://www.dhis2.org",
   "main": "d2-manifest.js",
