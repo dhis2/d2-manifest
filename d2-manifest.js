@@ -51,7 +51,10 @@ const args = require('minimist')(process.argv.slice(2), {
         'manifest.default_locale', 'default_locale', 'locale', 'l',
         'manifest.activities.dhis.href', 'href',
     ],
-    boolean: ['debug', 'help', 'interactive', 'ugly'],
+    boolean: ['debug', 'help', 'interactive', 'ugly', 'timestamp'],
+    default: {
+        timestamp: true,
+    }
 });
 
 const defaultValues = {
@@ -75,6 +78,7 @@ if(args.help) {
       -h, --help                         Print usage information and exit
       -i, --interactive                  Enable interactive mode
       -u, --ugly                         Don't pretty-print the manifest
+      --no-timestamp                     Don't add 'manifest_generated_at' timestamp
       -m <path>                          Write the manifest to <path>
       -p <path>                          Read npm package info from <path>
 
@@ -112,6 +116,14 @@ if(packagePath) {
     manifest.merge(packageFile, false);
 } else {
     log.debug('No package path specified'.magenta);
+}
+
+if(args.timestamp) {
+    const ts = new Date();
+    log.debug('Generating timestamp:'.magenta, ts);
+    manifest.merge({ 'manifest_generated_at': ts.toString() }, false);
+} else {
+    log.debug('Timestamp disabled'.magenta);
 }
 
 if(args.manifest) {
