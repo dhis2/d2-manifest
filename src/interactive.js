@@ -127,14 +127,15 @@ module.exports = function (manifest, manifestPath, ugly) {
 
                 case 'Q':
                     if(modified) {
-                        log.warn('Note: '.red + 'Unsaved changes will be lost. '.cyan + '*'.yellow + ')'.cyan);
-                        let choice = rls.question('\nDiscard changes and Quit?: (Y/N) '.cyan);
+                        log.warn('Note: '.red + 'Unsaved changes will be lost.'.cyan);
+                        let choice = rls.question('Discard changes and quit?: (Y/N) '.cyan);
 
                         if(choice.trim().toUpperCase()==='Y' || choice.trim().toUpperCase()==='YES') {
                             log.info('Terminating'.magenta);
                             return;
                         }
                         else {
+                            clearScreen();
                             break;
                         }
                     }
@@ -144,6 +145,7 @@ module.exports = function (manifest, manifestPath, ugly) {
                     }
 
                 default:
+                    clearScreen();
                     log.info('Unknown option:'.cyan, cmd);
                     break;
                 }
@@ -157,6 +159,7 @@ module.exports = function (manifest, manifestPath, ugly) {
 						modified = true;
                     }
                 } else {
+                    clearScreen();
                     log.info('Unknown option:'.cyan, cmd);
                 }
             }
