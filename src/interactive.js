@@ -40,6 +40,7 @@ module.exports = function (manifest, manifestPath, ugly) {
         let options = getOptions();
         let fieldName = '';
         let value = '';
+        let modified = false;
 
         while(true) {
             log.info('Available options:\n'.cyan);
@@ -86,6 +87,7 @@ module.exports = function (manifest, manifestPath, ugly) {
                     }
                     fieldName = '';
                     value = '';
+                    modified = true;
                     break;
 
                 case 'D':
@@ -95,6 +97,7 @@ module.exports = function (manifest, manifestPath, ugly) {
                     if (manifest.getFieldValue(fieldName)) {
                         log.info('Deleting field "'.cyan + fieldName.magenta + '" (current value "'.cyan + manifest.getFieldValue(fieldName).magenta + '")'.cyan);
                         manifest.setFieldValue(fieldName, '');
+                        modified = true;
                     } else {
                         log.info('Field "'.cyan + fieldName.magenta + '" was not set'.cyan);
                     }
@@ -109,6 +112,7 @@ module.exports = function (manifest, manifestPath, ugly) {
                     try {
                         log.info('Writing manifest to: '.cyan + manifestPath.magenta);
                         manifest.write(manifestPath, ugly);
+                        modified = false;
                     } catch (e) {
                         manifestPath = '';
                     }
@@ -122,8 +126,22 @@ module.exports = function (manifest, manifestPath, ugly) {
                     break;
 
                 case 'Q':
-                    log.info('Terminating'.magenta);
-                    return;
+                    if(modified) {
+                        log.warn('Note: '.red + 'Unsaved changes will be lost. '.cyan + '*'.yellow + ')'.cyan);
+                        let choice = rls.question('\nDiscard changes and Quit?: (Y/N) '.cyan);
+
+                        if(choice.trim().toUpperCase()==='Y' || choice.trim().toUpperCase()==='YES') {
+                            log.info('Terminating'.magenta);
+                            return;
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                    else {
+                        log.info('Terminating'.magenta);
+                        return;
+                    }
 
                 default:
                     log.info('Unknown option:'.cyan, cmd);
@@ -136,6 +154,7 @@ module.exports = function (manifest, manifestPath, ugly) {
                     if(value.length) {
                         log.info('Set '.cyan + options[cmd].magenta + ' = "'.cyan + value.magenta + '"'.cyan);
                         manifest.setFieldValue(options[cmd], value);
+						modified = true;
                     }
                 } else {
                     log.info('Unknown option:'.cyan, cmd);
