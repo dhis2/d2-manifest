@@ -154,8 +154,8 @@ module.exports = function (manifest, manifestPath, ugly) {
 
     function promptFieldValue(fieldName) {
         let value = '';
-        let currentValuePrompt = manifest[fieldName] ? '('.grey + manifest[fieldName].grey + ') '.grey : "";
-        let verb = manifest[fieldName] ? 'Edit' : 'Enter';
+        let currentValuePrompt = manifest.getFieldValue(fieldName) ? '('.grey + manifest.getFieldValue(fieldName).grey + ') '.grey : "";
+        let verb = manifest.getFieldValue(fieldName) ? 'Edit' : 'Enter';
 
         while(!value.length) {
             value = rls.question(verb.cyan + ' value for '.cyan + fieldName.magenta + ': '.cyan + currentValuePrompt).trim();
