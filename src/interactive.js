@@ -80,8 +80,10 @@ module.exports = function (manifest, manifestPath, ugly) {
                     }
                     value = promptFieldValue(fieldName);
                     clearScreen();
-                    log.info('Custom field added: "'.cyan + fieldName.magenta + '" = "'.cyan + value.magenta + '"'.cyan);
-                    manifest.setFieldValue(fieldName, value);
+                    if(value.length) {
+                        log.info('Custom field added: "'.cyan + fieldName.magenta + '" = "'.cyan + value.magenta + '"'.cyan);
+                        manifest.setFieldValue(fieldName, value);
+                    }
                     fieldName = '';
                     value = '';
                     break;
@@ -131,8 +133,10 @@ module.exports = function (manifest, manifestPath, ugly) {
                 if (options.hasOwnProperty(cmd)) {
                     value = promptFieldValue(options[cmd]);
                     clearScreen();
-                    log.info('Set '.cyan + options[cmd].magenta + ' = "'.cyan + value.magenta + '"'.cyan);
-                    manifest.setFieldValue(options[cmd], value);
+                    if(value.length) {
+                        log.info('Set '.cyan + options[cmd].magenta + ' = "'.cyan + value.magenta + '"'.cyan);
+                        manifest.setFieldValue(options[cmd], value);
+                    }
                 } else {
                     log.info('Unknown option:'.cyan, cmd);
                 }
@@ -155,6 +159,10 @@ module.exports = function (manifest, manifestPath, ugly) {
 
         while(!value.length) {
             value = rls.question(verb.cyan + ' value for '.cyan + fieldName.magenta + ': '.cyan + currentValuePrompt).trim();
+
+            if(!value.length) {
+                return value;
+            }
 
             if(hasIllegalInput(value)) {
                 log.warn('Error:'.red + ' "'.cyan + value.magenta + '" is not valid'.cyan);
