@@ -150,9 +150,11 @@ module.exports = function (manifest, manifestPath, ugly) {
 
     function promptFieldValue(fieldName) {
         let value = '';
+        let currentValuePrompt = manifest[fieldName] ? '('.grey + manifest[fieldName].grey + ') '.grey : "";
+        let verb = manifest[fieldName] ? 'Edit' : 'Enter';
 
         while(!value.length) {
-            value = rls.question('Enter value for '.cyan + fieldName.magenta + ': '.cyan).trim();
+            value = rls.question(verb.cyan + ' value for '.cyan + fieldName.magenta + ': '.cyan + currentValuePrompt).trim();
 
             if(hasIllegalInput(value)) {
                 log.warn('Error:'.red + ' "'.cyan + value.magenta + '" is not valid'.cyan);
