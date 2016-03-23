@@ -77,32 +77,32 @@ class Manifest {
     /**
      * Helper method to recursively set the value of a field
      *
-     * @param object
-     * @param fields
+     * @param manifest The manifest object to operate on
+     * @param fields An array of field names to recurse into
      * @param value
      * @private
      */
-    static _setFieldValue(object, fields, value) {
+    static _setFieldValue(manifest, fields, value) {
         if (!Array.isArray(fields) || fields.length === 0) {
             throw new Error('fields must be an array');
         }
 
         if (fields.length > 1) {
-            if (!object.hasOwnProperty(fields[0])) {
-                object[fields[0]] = {};
-                Manifest._setFieldValue(object[fields[0]], fields.splice(1), value);
+            if (!manifest.hasOwnProperty(fields[0])) {
+                manifest[fields[0]] = {};
+                Manifest._setFieldValue(manifest[fields[0]], fields.splice(1), value);
             } else {
-                if (!isPlainObject(object[fields[0]])) {
+                if (!isPlainObject(manifest[fields[0]])) {
                     throw new Error('field is not an object');
                 }
 
-                Manifest._setFieldValue(object[fields[0]], fields.splice(1), value);
+                Manifest._setFieldValue(manifest[fields[0]], fields.splice(1), value);
             }
         } else {
             if (value) {
-                object[fields[0]] = value;
+                manifest[fields[0]] = value;
             } else {
-                delete object[fields[0]];
+                delete manifest[fields[0]];
             }
         }
     }
