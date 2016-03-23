@@ -116,7 +116,7 @@ class Manifest {
      */
     setFieldValue(fieldName, value) {
         if (fieldName === 'developer.name') {
-            value = Manifest.parseAuthor(value);
+            value = Object.assign({}, this.developer, Manifest.parseAuthor(value));
             Manifest._setFieldValue(this, ['developer'], value);
         } else {
             Manifest._setFieldValue(this, fieldName.split('.'), value);
