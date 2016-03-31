@@ -11,7 +11,7 @@ const Manifest = require('./src/Manifest');
 
 const args = require('minimist')(process.argv.slice(2), {
     alias: {
-        debug: ['d'],
+        debug: ['!'],
         help: ['h', '?'],
         ugly: ['u'],
         interactive: ['i'],
@@ -21,7 +21,7 @@ const args = require('minimist')(process.argv.slice(2), {
 
         'manifest.version': ['version', 'v'],
         'manifest.name': ['name', 'n'],
-        'manifest.description': ['description', 'descr', 'desc'],
+        'manifest.description': ['d', 'description', 'descr', 'desc'],
         'manifest.developer.name': ['developer', 'dev', 'author'],
         'manifest.developer.email': ['email'],
         'manifest.developer.url': ['url', 'homepage'],
@@ -32,27 +32,30 @@ const args = require('minimist')(process.argv.slice(2), {
         'manifest.launch_path': ['launch_path', 'index'],
         'manifest.installs_allowed_from': ['installs_allowed_from', 'allow', 'allowed', 'allow_from', 'allowed_from'],
         'manifest.default_locale': ['default_locale', 'locale', 'l'],
-        'manifest.activities.dhis.href': ['href']
+        'manifest.activities.dhis.href': ['href'],
+        'manifest.appType': ['type', 't'],
     },
     string: [
         'manifest.version', 'version', 'v',
         'manifest.name', 'name', 'n',
-        'manifest.description', 'description', 'descr', 'desc',
+        'manifest.description', 'd', 'description', 'descr', 'desc',
         'manifest.developer.name', 'developer', 'dev', 'author',
         'manifest.developer.email', 'email',
         'manifest.developer.url', 'url', 'homepage',
         'manifest.developer.company', 'company',
         'manifest.icons.16', 'icons.16',
-        'manifest.icons.48', 'icon', 'icons.48',
+        'manifest.icons.48', 'icons.48', 'icon',
         'manifest.icons.128', 'icons.128',
         'manifest.launch_path', 'launch_path', 'index',
         'manifest.installs_allowed_from', 'installs_allowed_from', 'allow', 'allowed', 'allow_from', 'allowed_from',
         'manifest.default_locale', 'default_locale', 'locale', 'l',
         'manifest.activities.dhis.href', 'href',
+        'manifest.appType', 'type', 't',
     ],
     boolean: ['debug', 'help', 'interactive', 'ugly', 'timestamp'],
     default: {
         timestamp: true,
+        'manifest.appType': 'APP'
     }
 });
 
@@ -64,7 +67,8 @@ const defaultValues = {
 
 if(args.debug) {
     log.setLevel(log.levels.TRACE);
-    log.debug('Debug mode enabled'.magenta);
+    log.debug('Debug mode enabled'.green);
+    log.debug('Args:'.green, args);
 }
 
 if(args.help) {
@@ -73,11 +77,12 @@ if(args.help) {
     Usage: ${arg} [options] [[-p] package] [[-m] manifest]
 
     Options:
-      -d, --debug                        Print debug messages
+      --debug                        Print debug messages
       -h, --help                         Print usage information and exit
       -i, --interactive                  Enable interactive mode
       -u, --ugly                         Don't pretty-print the manifest
       --no-timestamp                     Don't add 'manifest_generated_at' timestamp
+      --no-type                          Don't add an appType
       -m <path>                          Write the manifest to <path>
       -p <path>                          Read npm package info from <path>
 
@@ -85,6 +90,7 @@ if(args.help) {
       -v, --version <value>              Use <value> for the version field
       -n, --name <value>                 Use <value> for the name field
       -d, --desc, --description <value>  Use <value> for the description field
+      -t, --type <value>                 Set appType to <value>
       --dev, --developer <value>         Use <value> for the developer.name field
                                          It's also possible to specify the developer.email
                                          and developer.url fields here, in the same way as
@@ -93,6 +99,7 @@ if(args.help) {
       --launch_path, --index <value>     Use <value> for the launch_path field
       --allow-from, -allow <value>       Use <value> for the installs_allowed_from field
       -l, --locale <value>               Use <value> for the default_locale field
+      --href <value>                     Use <value> for the activities.dhis.href field
 
     In addition to the above, any option that starts with "--manifest.*" will be added to
     the manifest. For example, specifying "--manifest.foo bar" would add a field called
@@ -108,37 +115,87 @@ const manifestPath = args._.length > 1 ? args._[1] : args.out;
 const manifest = new Manifest(defaultValues);
 let rl;
 
+log.debug('Creating default manifest:'.green);
+log.debug(manifest.getJSON(false));
+
 if(packagePath) {
     log.info('Reading package data: '.cyan + packagePath);
     const packageFile = Manifest.readPackageFile(packagePath);
     log.debug(JSON.stringify(packageFile, null, 2));
     manifest.merge(packageFile, false);
 } else {
-    log.debug('No package path specified'.magenta);
+    log.debug('No package path specified'.green);
 }
 
 if(args.timestamp) {
     const ts = new Date();
-    log.debug('Generating timestamp:'.magenta, ts);
-    manifest.merge({ 'manifest_generated_at': ts.toString() }, false);
+    log.debug('Generating timestamp:'.green, ts);
+    manifest.setFieldValue('manifest_generated_at', ts.toString());
 } else {
-    log.debug('Timestamp disabled'.magenta);
+    log.debug('Timestamp disabled'.green);
 }
 
-if(args.manifest) {
-    log.debug('Merging data from arguments:'.magenta);
+if(args.type === false) {
+    log.debug('App type disabled'.green);
+    delete args.manifest.appType;
+} else if(args.type === undefined) {
+    log.debug('App type not defined'.green);
+} else {
+    switch(args.type.toUpperCase()) {
+    case '':
+    case 'APP':
+        args.manifest.appType = 'APP';
+        break;
+    case 'RESOURCE':
+        args.manifest.appType = 'RESOURCE';
+        break;
+    case 'DASHBOARD':
+    case 'DASHBOARD_WIDGET':
+    case 'WIDGET':
+        args.manifest.appType = 'DASHBOARD_WIDGET';
+        break;
+    case 'TRACKER':
+    case 'TRACKER_DASHBOARD_WIDGET':
+    case 'TRACKER_WIDGET':
+        args.manifest.appType = 'TRACKER_DASHBOARD_WIDGET';
+        break;
+    default:
+        args.manifest.appType = args.type.toUpperCase();
+    }
+    log.debug('App type set to:'.green, args.manifest.appType);
+}
+
+if(args.manifest && Manifest.cleanObject(args.manifest)) {
+    log.debug('Merging data from arguments:'.green);
     log.debug(JSON.stringify(args.manifest, null, 2));
     manifest.merge(args.manifest, true);
 } else {
-    log.debug('No manifest data in arguments'.magenta);
+    log.debug('No manifest data in arguments'.green);
 }
 
 if(!args.interactive) {
-    log.debug('Interactive mode not enabled'.magenta);
+    log.debug('Interactive mode not enabled'.green);
 
     if (!manifest.isValid()) {
         log.error('Validating manifest: '.cyan + '✗'.red + ' Error');
-        log.error('Error:'.red + ' The following required fields were missing: ' + manifest.getMissingFields().join(', '));
+        if (manifest.getMissingFields().length > 0) {
+            log.error(
+                'Error:'.red + ' The following required fields were missing: ' +
+                manifest
+                    .getMissingFields()
+                    .map(f => f.magenta.underline)
+                    .join(', ')
+            );
+        }
+        if (manifest.getInvalidFields().length > 0) {
+            log.error(
+                'Error:'.red + ' The following fields had invalid values: ' +
+                manifest
+                    .getInvalidFields()
+                    .map(f => f.magenta.underline + '=' + manifest.getFieldValue(f))
+                    .join(', ')
+            );
+        }
         process.exit(1);
     }
     log.info('Validating manifest: '.cyan + '✓'.green + ' Ok');
@@ -152,7 +209,7 @@ if(!args.interactive) {
             process.exit(1);
         }
     } else {
-        log.debug('No target file specified, printing to stdout'.magenta);
+        log.debug('No target file specified, printing to stdout'.green);
         log.info('Generated manifest:'.green);
         log.info(manifest.getJSON(args.ugly));
     }

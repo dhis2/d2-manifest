@@ -23,6 +23,7 @@ class Manifest {
 
         this.isValid = this.isValid.bind(this);
         this.getMissingFields = this.getMissingFields.bind(this);
+        this.getInvalidFields = this.getInvalidFields.bind(this);
         this.getJSON = this.getJSON.bind(this);
     }
 
@@ -34,17 +35,19 @@ class Manifest {
      * @returns {Object}
      * @private
      */
-    _cleanObject(data) {
-        return Object.keys(data)
+    static cleanObject(data) {
+        const out = Object.keys(data)
             .filter(field => isPlainObject(data[field]) || !!data[field])
             .reduce((obj, field) => {
                 if (isPlainObject(data[field])) {
-                    obj[field] = this._cleanObject(data[field]);
+                    obj[field] = Manifest.cleanObject(data[field]);
                 } else {
                     obj[field] = data[field];
                 }
                 return obj;
             }, {});
+
+        return Object.keys(out).length > 0 ? out : undefined;
     }
 
 
@@ -62,7 +65,7 @@ class Manifest {
                     if (key === 'developer' && data[key].name) {
                         Object.assign(data[key], Manifest.parseAuthor(data[key].name));
                     }
-                    const cleanData = force ? data[key] : this._cleanObject(data[key]);
+                    const cleanData = force ? data[key] : Manifest.cleanObject(data[key]);
                     this[key] = Object.assign({}, this[key], cleanData);
                 } else if (data[key] || force) {
                     this[key] = data[key];
@@ -162,7 +165,10 @@ class Manifest {
      * @returns {boolean}
      */
     isValid() {
-        return this.getMissingFields().length === 0;
+        const invalidFields = this.getInvalidFields();
+        const missingFields = this.getMissingFields();
+
+        return invalidFields.length + missingFields.length === 0;
     }
 
 
@@ -192,12 +198,36 @@ class Manifest {
      */
     static getOptionalFields() {
         return [
+            'appType',
             'icons.16',
             'icons.128',
             'developer.email',
             'developer.url',
             'developer.company'
         ];
+    }
+
+
+    /**
+     * Return an array of string options for the specified field name, or an empty array if there are no predefined
+     * options
+     *
+     * @param fieldName
+     * @returns {string[]}
+     */
+    static getOptionsForField(fieldName) {
+        switch (fieldName) {
+        case 'appType':
+            return [
+                'APP',
+                'DASHBOARD_WIDGET',
+                'TRACKER_DASHBOARD_WIDGET',
+                'RESOURCE'
+            ];
+
+        default:
+            return [];
+        }
     }
 
 
@@ -212,20 +242,20 @@ class Manifest {
 
 
     /**
-     * Recursively check if the specified field has a valid value
+     * Recursively check if the specified field has a value
      *
      * @param target The target object to check
-     * @param fields The name of the field to check, in dot notation (field.subfield)
+     * @param fields An array of field names to recurse into
      * @returns {boolean} True if the field exists and is not empty
      * @private
      */
-    static _isValidField(target, fields) {
+    static _fieldIsSet(target, fields) {
         if (Array.isArray(fields) && fields.length > 1) {
             const field = fields.shift();
-            return target && target.hasOwnProperty(field) && isPlainObject(target[field]) && Manifest._isValidField(target[field], fields);
+            return target && target.hasOwnProperty(field) && isPlainObject(target[field]) && Manifest._fieldIsSet(target[field], fields);
         }
 
-        return !!target[fields[0]];
+        return target[fields[0]];
     }
 
 
@@ -237,13 +267,13 @@ class Manifest {
      * @returns {string[]} A list of fields that are not present or have no value
      * @private
      */
-    static _checkFields(target, fieldNames) {
+    static _fieldsAreSet(target, fieldNames) {
         return fieldNames.filter(fieldName => {
             if (fieldName.indexOf('.') > 0) {
                 const fields = fieldName.split('.');
                 const object = fields.shift();
 
-                return !(target.hasOwnProperty(object) && Manifest._isValidField(target[object], fields));
+                return !(target.hasOwnProperty(object) && Manifest._fieldIsSet(target[object], fields));
             }
 
             return !(target.hasOwnProperty(fieldName) && target[fieldName] !== undefined && target[fieldName] !== '');
@@ -258,9 +288,25 @@ class Manifest {
      * @returns {string[]} List of field names
      */
     getAllEmptyFields() {
-        return Manifest._checkFields(this, Manifest.getRequiredFields())
-            .concat(Manifest._checkFields(this, Manifest.getOptionalFields()));
+        return Manifest._fieldsAreSet(this, Manifest.getRequiredFields())
+            .concat(Manifest._fieldsAreSet(this, Manifest.getOptionalFields()));
     }
+
+
+    /**
+     * Return an array of fields that have values that don't pass validation
+     *
+     * @returns {string[]}
+     */
+    getInvalidFields() {
+        return Manifest
+            .getAllKnownFields()
+            .filter(field => {
+                const opts = Manifest.getOptionsForField(field);
+                return opts.length > 0 && this.getFieldValue(field) != '' && opts.indexOf(this.getFieldValue(field)) === -1;
+            });
+    }
+
 
     /**
      * Checks the current manifest against the list of required fields
@@ -268,7 +314,7 @@ class Manifest {
      * @returns {string[]} List of required fields that are missing
      */
     getMissingFields() {
-        return Manifest._checkFields(this, Manifest.getRequiredFields());
+        return Manifest._fieldsAreSet(this, Manifest.getRequiredFields());
     }
 
 
@@ -278,7 +324,7 @@ class Manifest {
      * @returns {string[]}
      */
     getEmptyOptionalFields() {
-        return Manifest._checkFields(this, Manifest.getOptionalFields());
+        return Manifest._fieldsAreSet(this, Manifest.getOptionalFields());
     }
 
 

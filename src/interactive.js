@@ -128,7 +128,7 @@ module.exports = function (manifest, manifestPath, ugly) {
                 case 'Q':
                     if(modified) {
                         log.warn('Note: '.red + 'Unsaved changes will be lost.'.cyan);
-                        let choice = rls.question('Discard changes and quit?: (Y/N) '.cyan);
+                        let choice = rls.question('Discard changes and quit?: (y/N) '.cyan);
 
                         if(choice.trim().toUpperCase()==='Y' || choice.trim().toUpperCase()==='YES') {
                             log.info('Terminating'.magenta);
@@ -177,10 +177,24 @@ module.exports = function (manifest, manifestPath, ugly) {
     function promptFieldValue(fieldName) {
         let value = '';
         let currentValuePrompt = manifest.getFieldValue(fieldName) ? '('.grey + manifest.getFieldValue(fieldName).grey + ') '.grey : "";
-        let verb = manifest.getFieldValue(fieldName) ? 'Edit' : 'Enter';
+        const verb = manifest.getFieldValue(fieldName) ? 'Edit' : 'Enter';
+        const options = Manifest.getOptionsForField(fieldName);
 
         while(!value.length) {
-            value = rls.question(verb.cyan + ' value for '.cyan + fieldName.magenta + ': '.cyan + currentValuePrompt).trim();
+            if(options.length > 0) {
+                log.info('Possible values for '.cyan + fieldName.magenta + ': '.cyan + currentValuePrompt);
+                options.forEach((o, i) => { log.info('  ' + (i + 1).toString().yellow + ' : ' + o.grey) });
+                value = rls.question('Choose an option: '.cyan);
+
+                const opt = Number(value);
+                if (isNaN(opt) || opt < 1 || opt > options.length) {
+                    return '';
+                }
+
+                return options[opt-1];
+            } else {
+                value = rls.question(verb.cyan + ' value for '.cyan + fieldName.magenta + ': '.cyan + currentValuePrompt).trim();
+            }
 
             if(!value.length) {
                 return value;
