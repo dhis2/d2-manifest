@@ -63,7 +63,8 @@ const args = require('minimist')(process.argv.slice(2), {
 const defaultValues = {
     launch_path: 'index.html',
     default_locale: 'en',
-    activities: { dhis: { href: '*' } }
+    activities: { dhis: { href: '*' } },
+    appType: DEFAULT_APP_TYPE
 };
 
 if(args.debug) {
@@ -143,10 +144,7 @@ if(args.type === false) {
     log.debug('App type disabled'.green);
     delete args.manifest.appType;
 } else if(args.type === undefined) {
-    if(manifest.getFieldValue('appType').length == 0) {
-        manifest.setFieldValue('appType', DEFAULT_APP_TYPE);
-        log.debug('App type set to:'.green, manifest.getFieldValue('appType'));
-    } 
+    log.debug('App type not defined'.green);
 } else {
     switch(args.type.toUpperCase()) {
     case '':
