@@ -9,6 +9,8 @@ log.setDefaultLevel(log.levels.INFO);
 
 const Manifest = require('./src/Manifest');
 
+const DEFAULT_APP_TYPE = 'APP';
+
 const args = require('minimist')(process.argv.slice(2), {
     alias: {
         debug: ['!'],
@@ -55,14 +57,14 @@ const args = require('minimist')(process.argv.slice(2), {
     boolean: ['debug', 'help', 'interactive', 'ugly', 'timestamp'],
     default: {
         timestamp: true,
-        'manifest.appType': 'APP'
     }
 });
 
 const defaultValues = {
     launch_path: 'index.html',
     default_locale: 'en',
-    activities: { dhis: { href: '*' } }
+    activities: { dhis: { href: '*' } },
+    appType: DEFAULT_APP_TYPE
 };
 
 if(args.debug) {
@@ -136,6 +138,9 @@ if(args.timestamp) {
 }
 
 if(args.type === false) {
+    if(manifest.getFieldValue('appType').length != 0) {
+        manifest.setFieldValue('appType', '');
+    } 
     log.debug('App type disabled'.green);
     delete args.manifest.appType;
 } else if(args.type === undefined) {
