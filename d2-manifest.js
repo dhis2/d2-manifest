@@ -9,8 +9,6 @@ log.setDefaultLevel(log.levels.INFO);
 
 const Manifest = require('./src/Manifest');
 
-const DEFAULT_APP_TYPE = 'APP';
-
 const args = require('minimist')(process.argv.slice(2), {
     alias: {
         debug: ['!'],
@@ -64,7 +62,7 @@ const defaultValues = {
     launch_path: 'index.html',
     default_locale: 'en',
     activities: { dhis: { href: '*' } },
-    appType: DEFAULT_APP_TYPE
+    appType: 'APP'
 };
 
 if(args.debug) {
