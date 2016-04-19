@@ -137,6 +137,9 @@ if(args.timestamp) {
 }
 
 if(args.type === false) {
+    if(manifest.getFieldValue('appType').length != 0) {
+        manifest.setFieldValue('appType', '');
+    } 
     log.debug('App type disabled'.green);
     delete args.manifest.appType;
 } else if(args.type === undefined) {
