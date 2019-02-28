@@ -2,6 +2,8 @@
 D2 Manifest
 ===========
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/dhis2/d2-manifest.svg)](https://greenkeeper.io/)
+
 D2 Manifest is a node app that helps generate manifests for DHIS2 apps.
 
 Two modes of operation are supported: Automatic and interactive (manual).
