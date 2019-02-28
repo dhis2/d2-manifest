@@ -13,7 +13,7 @@
   },
   "license": "BSD-3-Clause",
   "dependencies": {
-    "author-regex": "^0.2.1",
+    "author-regex": "^1.0.0",
     "colors": "^1.0.3",
     "lodash.isplainobject": "^4.0.3",
     "loglevel": "^1.4.0",
