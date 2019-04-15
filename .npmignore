@@ -1,0 +1,12 @@
+# Development dotfiles
+.editorconfig
+.eslintrc
+.gitattributes
+.gitignore
+.lintstagedrc
+.prettierrc
+.travis.yml
+
+# Tests, fixtures and test build results
+*.test.js
+test
